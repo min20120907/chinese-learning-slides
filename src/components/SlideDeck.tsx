@@ -18,22 +18,17 @@ type HistoryState = {
 };
 
 export const SlideDeck: React.FC<SlideDeckProps> = ({ slides, collectionId, onAddPage }) => {
-    const [currentSlide, setCurrentSlide] = useState(0);
+    const [currentSlide, setCurrentSlide] = useState(() => {
+        const saved = localStorage.getItem(`collection_slide_index_${collectionId}`);
+        return saved ? Number(saved) : 0;
+    });
+
     const [tool, setTool] = useState<Tool>('cursor');
     const [color, setColor] = useState('#FF0000');
 
     // Stores history for each slide
-    const [fullHistory, setFullHistory] = useState<Record<number, HistoryState>>({});
-
-    const containerRef = useRef<HTMLDivElement>(null);
-    const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-    const [isLoaded, setIsLoaded] = useState(false);
-
-    // Load from local storage on mount
-    useEffect(() => {
+    const [fullHistory, setFullHistory] = useState<Record<number, HistoryState>>(() => {
         const saved = localStorage.getItem(`slides_data_${collectionId}`);
-        const savedSlideIndex = localStorage.getItem(`collection_slide_index_${collectionId}`);
-
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
@@ -46,25 +41,19 @@ export const SlideDeck: React.FC<SlideDeckProps> = ({ slides, collectionId, onAd
                         future: []
                     };
                 });
-                setFullHistory(restoredHistory);
+                return restoredHistory;
             } catch (e) {
                 console.error("Failed to load data", e);
             }
         }
+        return {};
+    });
 
-        if (savedSlideIndex) {
-            setCurrentSlide(Number(savedSlideIndex));
-        } else {
-            setCurrentSlide(0);
-        }
-        setIsLoaded(true);
-
-    }, [collectionId]);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
     // Save to local storage whenever fullHistory changes
     useEffect(() => {
-        if (!isLoaded) return;
-
         // Extract only 'present' state for persistence
         const toSave: Record<number, DrawingData> = {};
         Object.keys(fullHistory).forEach(key => {
@@ -72,13 +61,12 @@ export const SlideDeck: React.FC<SlideDeckProps> = ({ slides, collectionId, onAd
             toSave[k] = fullHistory[k].present;
         });
         localStorage.setItem(`slides_data_${collectionId}`, JSON.stringify(toSave));
-    }, [fullHistory, collectionId, isLoaded]);
+    }, [fullHistory, collectionId]);
 
     // Save current slide index
     useEffect(() => {
-        if (!isLoaded) return;
         localStorage.setItem(`collection_slide_index_${collectionId}`, currentSlide.toString());
-    }, [currentSlide, collectionId, isLoaded]);
+    }, [currentSlide, collectionId]);
 
 
     useEffect(() => {

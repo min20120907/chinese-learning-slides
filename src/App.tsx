@@ -20,25 +20,21 @@ const DEFAULT_SLIDES = [
 ];
 
 export default function App() {
-    const [currentCollectionId, setCurrentCollectionId] = useState<string | null>(null);
-    const [collections, setCollections] = useState<{ id: string; title: string; date: string; template?: 'default' | 'blank' }[]>([]);
-    // Store custom pages count per collection to reconstruct the deck
-    const [customPages, setCustomPages] = useState<Record<string, number>>({});
-    const [isLoaded, setIsLoaded] = useState(false);
+    const [collections, setCollections] = useState<{ id: string; title: string; date: string; template?: 'default' | 'blank' }[]>(() => {
+        const saved = localStorage.getItem('collections_meta');
+        return saved ? JSON.parse(saved) : [];
+    });
+
+    const [customPages, setCustomPages] = useState<Record<string, number>>(() => {
+        const saved = localStorage.getItem('collections_custom_pages');
+        return saved ? JSON.parse(saved) : {};
+    });
+
+    const [currentCollectionId, setCurrentCollectionId] = useState<string | null>(() => {
+        return localStorage.getItem('current_collection_id');
+    });
 
     useEffect(() => {
-        const savedCollections = localStorage.getItem('collections_meta');
-        const savedCustomPages = localStorage.getItem('collections_custom_pages');
-        const savedCurrentId = localStorage.getItem('current_collection_id');
-
-        if (savedCollections) setCollections(JSON.parse(savedCollections));
-        if (savedCustomPages) setCustomPages(JSON.parse(savedCustomPages));
-        if (savedCurrentId) setCurrentCollectionId(savedCurrentId);
-        setIsLoaded(true);
-    }, []);
-
-    useEffect(() => {
-        if (!isLoaded) return;
         localStorage.setItem('collections_meta', JSON.stringify(collections));
         localStorage.setItem('collections_custom_pages', JSON.stringify(customPages));
         if (currentCollectionId) {
@@ -46,7 +42,7 @@ export default function App() {
         } else {
             localStorage.removeItem('current_collection_id');
         }
-    }, [collections, customPages, currentCollectionId, isLoaded]);
+    }, [collections, customPages, currentCollectionId]);
 
     const handleCreateCollection = (title: string, template: 'default' | 'blank') => {
         const newId = Date.now().toString();
