@@ -27,6 +27,7 @@ export const SlideDeck: React.FC<SlideDeckProps> = ({ slides, collectionId, onAd
 
     const containerRef = useRef<HTMLDivElement>(null);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+    const [isLoaded, setIsLoaded] = useState(false);
 
     // Load from local storage on mount
     useEffect(() => {
@@ -36,8 +37,6 @@ export const SlideDeck: React.FC<SlideDeckProps> = ({ slides, collectionId, onAd
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
-                // Reconstruct full history structure from simple saved data (just the present state)
-                // To save space, we might only save the 'present' state.
                 const restoredHistory: Record<number, HistoryState> = {};
                 Object.keys(parsed).forEach(key => {
                     const k = Number(key);
@@ -56,13 +55,16 @@ export const SlideDeck: React.FC<SlideDeckProps> = ({ slides, collectionId, onAd
         if (savedSlideIndex) {
             setCurrentSlide(Number(savedSlideIndex));
         } else {
-            setCurrentSlide(0); // Reset to 0 if no saved index found for this collection
+            setCurrentSlide(0);
         }
+        setIsLoaded(true);
 
     }, [collectionId]);
 
-    // Save to local storage whenever fullHistory changes (debounced ideally, but here simple)
+    // Save to local storage whenever fullHistory changes
     useEffect(() => {
+        if (!isLoaded) return;
+
         // Extract only 'present' state for persistence
         const toSave: Record<number, DrawingData> = {};
         Object.keys(fullHistory).forEach(key => {
@@ -70,12 +72,13 @@ export const SlideDeck: React.FC<SlideDeckProps> = ({ slides, collectionId, onAd
             toSave[k] = fullHistory[k].present;
         });
         localStorage.setItem(`slides_data_${collectionId}`, JSON.stringify(toSave));
-    }, [fullHistory, collectionId]);
+    }, [fullHistory, collectionId, isLoaded]);
 
     // Save current slide index
     useEffect(() => {
+        if (!isLoaded) return;
         localStorage.setItem(`collection_slide_index_${collectionId}`, currentSlide.toString());
-    }, [currentSlide, collectionId]);
+    }, [currentSlide, collectionId, isLoaded]);
 
 
     useEffect(() => {

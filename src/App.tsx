@@ -25,6 +25,7 @@ export default function App() {
     const [collections, setCollections] = useState<{ id: string; title: string; date: string }[]>([]);
     // Store custom pages count per collection to reconstruct the deck
     const [customPages, setCustomPages] = useState<Record<string, number>>({});
+    const [isLoaded, setIsLoaded] = useState(false);
 
     useEffect(() => {
         const savedCollections = localStorage.getItem('collections_meta');
@@ -34,9 +35,11 @@ export default function App() {
         if (savedCollections) setCollections(JSON.parse(savedCollections));
         if (savedCustomPages) setCustomPages(JSON.parse(savedCustomPages));
         if (savedCurrentId) setCurrentCollectionId(savedCurrentId);
+        setIsLoaded(true);
     }, []);
 
     useEffect(() => {
+        if (!isLoaded) return;
         localStorage.setItem('collections_meta', JSON.stringify(collections));
         localStorage.setItem('collections_custom_pages', JSON.stringify(customPages));
         if (currentCollectionId) {
@@ -44,7 +47,7 @@ export default function App() {
         } else {
             localStorage.removeItem('current_collection_id');
         }
-    }, [collections, customPages, currentCollectionId]);
+    }, [collections, customPages, currentCollectionId, isLoaded]);
 
     const handleCreateCollection = (title: string) => {
         const newId = Date.now().toString();
