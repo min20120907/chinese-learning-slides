@@ -4,29 +4,39 @@ import { SlideProps, DrawingData } from '../types';
 import { ToolBar, Tool } from './ToolBar';
 import { InteractiveOverlay } from './InteractiveOverlay';
 
-interface SlideDeckProps {
-    slides: React.ComponentType<SlideProps>[];
-    collectionId: string; // Identifier for storage
-    onAddPage: () => void; // New prop
-}
-
 // History state architecture
-type HistoryState = {
+export type HistoryState = {
     past: DrawingData[];
     present: DrawingData;
     future: DrawingData[];
 };
 
-export const SlideDeck: React.FC<SlideDeckProps> = ({ slides, collectionId, onAddPage }) => {
-    const [currentSlide, setCurrentSlide] = useState(() => {
-        const saved = localStorage.getItem(`collection_slide_index_${collectionId}`);
-        return saved ? Number(saved) : 0;
-    });
+interface SlideDeckProps {
+    slides: React.ComponentType<SlideProps>[];
+    collectionId: string; // Identifier for storage
+    onAddPage: () => void;
+    // Controlled props
+    currentSlide: number;
+    onSlideChange: (index: number) => void;
+    // Broadcast props
+    onHistoryChange?: (slideIndex: number, history: HistoryState) => void;
+    externalHistory?: Record<number, HistoryState>;
+}
 
+export const SlideDeck: React.FC<SlideDeckProps> = ({
+    slides,
+    collectionId,
+    onAddPage,
+    currentSlide,
+    onSlideChange,
+    onHistoryChange,
+    externalHistory
+}) => {
     const [tool, setTool] = useState<Tool>('cursor');
     const [color, setColor] = useState('#FF0000');
 
     // Stores history for each slide
+    // We initialize from localStorage, but if externalHistory is provided (Viewer), we merge or use it
     const [fullHistory, setFullHistory] = useState<Record<number, HistoryState>>(() => {
         const saved = localStorage.getItem(`slides_data_${collectionId}`);
         if (saved) {
@@ -52,6 +62,19 @@ export const SlideDeck: React.FC<SlideDeckProps> = ({ slides, collectionId, onAd
     const containerRef = useRef<HTMLDivElement>(null);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
+    // Sync external history (for Viewers)
+    useEffect(() => {
+        if (externalHistory) {
+            setFullHistory(prev => {
+                // Merge strategies could be complex, but for broadcast, simpler is better:
+                // If we receive history for a slide, replace our current state for that slide?
+                // Or just replace the whole thing if it's authoritative?
+                // For now, let's just replace the keys that exist in externalHistory
+                return { ...prev, ...externalHistory };
+            });
+        }
+    }, [externalHistory]);
+
     // Save to local storage whenever fullHistory changes
     useEffect(() => {
         // Extract only 'present' state for persistence
@@ -62,12 +85,6 @@ export const SlideDeck: React.FC<SlideDeckProps> = ({ slides, collectionId, onAd
         });
         localStorage.setItem(`slides_data_${collectionId}`, JSON.stringify(toSave));
     }, [fullHistory, collectionId]);
-
-    // Save current slide index
-    useEffect(() => {
-        localStorage.setItem(`collection_slide_index_${collectionId}`, currentSlide.toString());
-    }, [currentSlide, collectionId]);
-
 
     useEffect(() => {
         const updateDimensions = () => {
@@ -85,11 +102,13 @@ export const SlideDeck: React.FC<SlideDeckProps> = ({ slides, collectionId, onAd
     }, []);
 
     const nextSlide = () => {
-        setCurrentSlide((prev) => Math.min(prev + 1, slides.length - 1));
+        const newIndex = Math.min(currentSlide + 1, slides.length - 1);
+        onSlideChange(newIndex);
     };
 
     const prevSlide = () => {
-        setCurrentSlide((prev) => Math.max(prev - 1, 0));
+        const newIndex = Math.max(currentSlide - 1, 0);
+        onSlideChange(newIndex);
     };
 
     useEffect(() => {
@@ -101,7 +120,6 @@ export const SlideDeck: React.FC<SlideDeckProps> = ({ slides, collectionId, onAd
             } else if (e.key === 'ArrowLeft') {
                 prevSlide();
             } else if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
-                // Undo/Redo shortcuts? 
                 if (e.shiftKey) handleRedo();
                 else handleUndo();
             }
@@ -109,7 +127,7 @@ export const SlideDeck: React.FC<SlideDeckProps> = ({ slides, collectionId, onAd
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [slides.length, currentSlide, fullHistory]); // depend on history for undo?
+    }, [slides.length, currentSlide]);
 
     // --- Undo / Redo Logic ---
 
@@ -122,15 +140,22 @@ export const SlideDeck: React.FC<SlideDeckProps> = ({ slides, collectionId, onAd
     };
 
     const updateCurrentHistory = (newHistory: HistoryState) => {
-        setFullHistory(prev => ({
-            ...prev,
-            [currentSlide]: newHistory
-        }));
+        setFullHistory(prev => {
+            const updated = {
+                ...prev,
+                [currentSlide]: newHistory
+            };
+            return updated;
+        });
+
+        // Notify parent about change
+        if (onHistoryChange) {
+            onHistoryChange(currentSlide, newHistory);
+        }
     };
 
     const handleUpdateDrawing = (newData: DrawingData) => {
         const current = getCurrentHistory();
-        // Push current present to past, set new present, clear future
         updateCurrentHistory({
             past: [...current.past, current.present],
             present: newData,
@@ -177,6 +202,7 @@ export const SlideDeck: React.FC<SlideDeckProps> = ({ slides, collectionId, onAd
                         key={index}
                         className={`absolute inset-0 w-full h-full transition-opacity duration-300 ${index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'}`}
                     >
+                        {/* Render active slide */}
                         <Slide isActive={index === currentSlide} />
                     </div>
                 ))}
