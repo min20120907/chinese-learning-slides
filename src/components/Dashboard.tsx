@@ -8,18 +8,20 @@ interface Collection {
 
 interface DashboardProps {
     collections: Collection[];
-    onCreateCollection: (title: string) => void;
+    onCreateCollection: (title: string, template: 'default' | 'blank') => void;
     onSelectCollection: (id: string) => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ collections, onCreateCollection, onSelectCollection }) => {
     const [newTitle, setNewTitle] = React.useState('');
+    const [template, setTemplate] = React.useState<'default' | 'blank'>('default');
 
     const handleCreate = (e: React.FormEvent) => {
         e.preventDefault();
         if (newTitle.trim()) {
-            onCreateCollection(newTitle);
+            onCreateCollection(newTitle, template);
             setNewTitle('');
+            setTemplate('default');
         }
     };
 
@@ -38,6 +40,30 @@ export const Dashboard: React.FC<DashboardProps> = ({ collections, onCreateColle
                             value={newTitle}
                             onChange={(e) => setNewTitle(e.target.value)}
                         />
+
+                        <div className="flex gap-2 justify-center text-sm">
+                            <label className="flex items-center gap-1 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    name="template"
+                                    value="default"
+                                    checked={template === 'default'}
+                                    onChange={() => setTemplate('default')}
+                                />
+                                <span>Default Lesson</span>
+                            </label>
+                            <label className="flex items-center gap-1 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    name="template"
+                                    value="blank"
+                                    checked={template === 'blank'}
+                                    onChange={() => setTemplate('blank')}
+                                />
+                                <span>Blank</span>
+                            </label>
+                        </div>
+
                         <button
                             type="submit"
                             disabled={!newTitle.trim()}

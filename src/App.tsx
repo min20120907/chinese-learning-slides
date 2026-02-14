@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { SlideDeck } from './components/SlideDeck';
 import { Dashboard } from './components/Dashboard';
 import { TitleSlide } from './slides/TitleSlide';
@@ -8,7 +8,6 @@ import { NumbersSlide } from './slides/NumbersSlide';
 import { MeasureWordsSlide } from './slides/MeasureWordsSlide';
 import { NumberSentencesSlide } from './slides/NumberSentencesSlide';
 import { NoteSlide } from './slides/NoteSlide';
-import { SlideProps } from './types';
 
 // Default slides for any new session
 const DEFAULT_SLIDES = [
@@ -22,7 +21,7 @@ const DEFAULT_SLIDES = [
 
 export default function App() {
     const [currentCollectionId, setCurrentCollectionId] = useState<string | null>(null);
-    const [collections, setCollections] = useState<{ id: string; title: string; date: string }[]>([]);
+    const [collections, setCollections] = useState<{ id: string; title: string; date: string; template?: 'default' | 'blank' }[]>([]);
     // Store custom pages count per collection to reconstruct the deck
     const [customPages, setCustomPages] = useState<Record<string, number>>({});
     const [isLoaded, setIsLoaded] = useState(false);
@@ -49,12 +48,13 @@ export default function App() {
         }
     }, [collections, customPages, currentCollectionId, isLoaded]);
 
-    const handleCreateCollection = (title: string) => {
+    const handleCreateCollection = (title: string, template: 'default' | 'blank') => {
         const newId = Date.now().toString();
         const newCollection = {
             id: newId,
             title,
-            date: new Date().toLocaleDateString()
+            date: new Date().toLocaleDateString(),
+            template
         };
         setCollections(prev => [...prev, newCollection]);
         setCurrentCollectionId(newId);
@@ -79,9 +79,13 @@ export default function App() {
     }
 
     // Construct slides: Default + Custom Note Slides
+    const currentCollection = collections.find(c => c.id === currentCollectionId);
+    const isBlank = currentCollection?.template === 'blank';
+    const baseSlides = isBlank ? [NoteSlide] : DEFAULT_SLIDES;
+
     const extraPagesCount = customPages[currentCollectionId] || 0;
     const extraSlides = Array(extraPagesCount).fill(NoteSlide);
-    const activeSlides = [...DEFAULT_SLIDES, ...extraSlides];
+    const activeSlides = [...baseSlides, ...extraSlides];
 
     return (
         <div className="relative">
