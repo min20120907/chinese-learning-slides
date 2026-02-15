@@ -119,25 +119,19 @@ export default function App() {
         setCurrentCollectionId(id);
     };
 
-    // --- Render ---
-
-    if (!currentCollectionId) {
-        return (
-            <Dashboard
-                onSelectCollection={handleSelectCollection}
-            />
-        );
-    }
-
     // Determine slides to render
     const activeSlides = useMemo(() => {
-        if (!currentCollection) return [];
+        if (!currentCollectionId || !currentCollection) return [];
 
         const extraPagesCount = customPages[currentCollectionId] || 0;
         const extraSlides = Array(extraPagesCount).fill(NoteSlide);
 
         if (currentCollection.template === 'pdf') {
             if (currentCollection.pageCount) {
+                // Create an array of component functions, ensuring unique keys/references if possible
+                // Note: Creating components inside useMemo is generally okay if deps are stable,
+                // but normally we'd pass data to a generic component.
+                // For this architecture, we are generating a list of Component Types.
                 const pdfSlides = Array.from({ length: currentCollection.pageCount }, (_, i) => {
                     const PdfPageSlide = (props: any) => (
                         <PDFSlide
@@ -157,6 +151,16 @@ export default function App() {
             return [...DEFAULT_SLIDES, ...extraSlides];
         }
     }, [currentCollection, customPages, currentCollectionId]);
+
+    // --- Render ---
+
+    if (!currentCollectionId) {
+        return (
+            <Dashboard
+                onSelectCollection={handleSelectCollection}
+            />
+        );
+    }
 
     return (
         <div className="relative">

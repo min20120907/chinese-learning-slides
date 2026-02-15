@@ -119,3 +119,4 @@ dist
 .gemini/
 .agent/
 .system_generated/
+src/firebase.ts

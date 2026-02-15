@@ -9,6 +9,7 @@ interface InteractiveOverlayProps {
     onUpdate: (data: DrawingData) => void;
     width: number;
     height: number;
+    readOnly?: boolean;
 }
 
 export const InteractiveOverlay: React.FC<InteractiveOverlayProps> = ({
@@ -18,6 +19,7 @@ export const InteractiveOverlay: React.FC<InteractiveOverlayProps> = ({
     onUpdate,
     width,
     height,
+    readOnly = false,
 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [isDrawing, setIsDrawing] = useState(false);
@@ -163,7 +165,7 @@ export const InteractiveOverlay: React.FC<InteractiveOverlayProps> = ({
                 ref={canvasRef}
                 width={width}
                 height={height}
-                className={`absolute inset-0 ${tool !== 'cursor' ? 'pointer-events-auto cursor-crosshair' : 'pointer-events-none'}`}
+                className={`absolute inset-0 ${!readOnly && tool !== 'cursor' ? 'pointer-events-auto cursor-crosshair' : 'pointer-events-none'}`}
                 onMouseDown={handleStart}
                 onMouseMove={handleMove}
                 onMouseUp={handleEnd}
@@ -183,7 +185,7 @@ export const InteractiveOverlay: React.FC<InteractiveOverlayProps> = ({
                         left: box.x,
                         top: box.y,
                         color: box.color,
-                        pointerEvents: tool === 'cursor' || tool === 'text' ? 'auto' : 'none'
+                        pointerEvents: !readOnly && (tool === 'cursor' || tool === 'text') ? 'auto' : 'none'
                     }}
                     className="group"
                 >

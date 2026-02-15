@@ -67,21 +67,24 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCollection }) => {
             }
 
             // 3. Save metadata to Firestore
-            await addDoc(collection(db, 'collections'), {
+            const collectionData: any = {
                 title: newTitle,
                 template,
                 date: new Date().toLocaleDateString(),
                 createdAt: Timestamp.now(),
-                pdfUrl: pdfUrl || undefined,
-                pageCount: pageCount || undefined
-            });
+            };
+
+            if (pdfUrl) collectionData.pdfUrl = pdfUrl;
+            if (pageCount) collectionData.pageCount = pageCount;
+
+            await addDoc(collection(db, 'collections'), collectionData);
 
             setNewTitle('');
             setTemplate('default');
             setPdfFile(null);
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error creating collection:", error);
-            alert("Failed to create collection. Check console for details.");
+            alert(`Failed to create collection: ${error.message || error}`);
         } finally {
             setIsUploading(false);
         }
